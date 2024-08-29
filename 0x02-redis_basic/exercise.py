@@ -2,7 +2,21 @@
 '''Module for caching data in Redis'''
 import redis
 import uuid
-from typing import Union, Callable
+from typing import Union, Callable, Any
+from functools import wraps
+
+
+def count_calls(method: Callable) -> Callable:
+    '''
+    Decorator that increments the count for
+    a method call in Redis
+    '''
+    @wraps(method)
+    def invoker(self, *args, **kwargs) -> Any:
+        if isinstance(self._redis, redis.Redis):
+            self._redis.incr(method.__qualname__)
+        return method(self, *args, **kwargs)
+    return invoker
 
 
 class Cache:
@@ -13,6 +27,7 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb(True)
 
+    @count_calls
     def store(self, data: Union[str, bytes, int, float]) -> str:
         '''Stores data in Redis and returns a key'''
         key = str(uuid.uuid4())
