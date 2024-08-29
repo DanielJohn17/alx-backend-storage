@@ -38,6 +38,7 @@ def call_history(method: Callable) -> Callable:
 
 
 def replay(fn: Callable) -> None:
+    '''Displays the history of calls of a particular function in Redis'''
     if fn is None or not hasattr(fn, '__self__'):
         return
     redis_store = getattr(fn.__self__, '_redis', None)
