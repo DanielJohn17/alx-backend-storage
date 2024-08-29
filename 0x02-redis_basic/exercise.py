@@ -19,6 +19,24 @@ def count_calls(method: Callable) -> Callable:
     return invoker
 
 
+def call_history(method: Callable) -> Callable:
+    '''
+    Decorator that stores the history of inputs and
+    outputs for a particular function in Redis.
+    '''
+    @wraps(method)
+    def invoker(self, *args, **kwargs) -> Any:
+        input_key = '{}:inputs'.format(method.__qualname__)
+        output_key = '{}:outputs'.format(method.__qualname__)
+        if isinstance(self._redis, redis.Redis):
+            self._redis.rpush(input_key, str(args))
+        output = method(self, *args, **kwargs)
+        if isinstance(self._redis, redis.Redis):
+            self._redis.rpush(output_key, output)
+        return output
+    return invoker
+
+
 class Cache:
     '''Class for caching data in Redis'''
 
@@ -28,6 +46,7 @@ class Cache:
         self._redis.flushdb(True)
 
     @count_calls
+    @call_history
     def store(self, data: Union[str, bytes, int, float]) -> str:
         '''Stores data in Redis and returns a key'''
         key = str(uuid.uuid4())
